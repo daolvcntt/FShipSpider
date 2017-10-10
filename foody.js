@@ -11,7 +11,10 @@ var stream = require('stream');
 var log = require('npmlog');
 var cheerio = require('cheerio');
 var mysql = require('promise-mysql');
+var hashids = require('hashids');
+var bcrypt = require('bcrypt');
 
+var hashIds = new hashids(process.env.HASHID_SALT, process.env.HASHID_LENGTH, process.env.HASHID_ALPHABET);
 var connection = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -82,6 +85,7 @@ function crawl () {
         let categoryId = 0;
         let restaurantId = 0;
         let menuId = 0;
+        let uuid;
         // ADD CATEGORY
         connection.query('SELECT * FROM restaurant_categories WHERE name = ?', [category]).then((rows) => {
           if (rows.length === 0) {
@@ -91,9 +95,16 @@ function crawl () {
           } else categoryId = rows[0].id;
           // ADD RESTAURANT
           wait(500).then(() => {
-            connection.query('INSERT INTO restaurants SET ?', {name: name, address: address, open_time: openTime, close_time: closeTime, category_id: categoryId}).then((rows) => {
-              restaurantId = rows.insertId;
-              console.log('restaurant id: '+rows.insertId);
+            // CREATE USER
+            bcrypt.hash('123456', 10).then(function(password) {
+                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password, address: address, created_at: Date.now(), updated_at: Date.now()}).then((rows) => {
+                  uuid = hashIds.encode(rows.insertId);
+                  connection.query('INSERT INTO restaurants SET ?', { user_id: uuid, name: name, address: address, open_time: openTime, close_time: closeTime, category_id: categoryId}).then((inserted) => {
+                    restaurantId = inserted.insertId;
+                    connection.query('UPDATE users SET uuid = ?, username = ? WHERE id = ?', [uuid, 'restaurant'+restaurantId, rows.insertId]);
+                    console.log('restaurant id: '+inserted.insertId);
+                  });
+                });
             });
           });
         });
