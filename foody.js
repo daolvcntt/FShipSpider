@@ -65,6 +65,15 @@ function get(url, qs) {
   return request(op).then(function(res) {return res;});
 }
 
+function getLinks () {
+  console.log('Begin get links...');
+  let links = fs.readFileSync('links.html').toString();
+  let arrLinks = _.split(links, '\n', 2000);
+  async.each(arrLinks, link => {
+    connection.query('INSERT INTO links SET ?', {link: link});
+  })
+}
+
 function crawl () {
   // connection.connect();
   connection.query('SELECT link FROM links').then(function(rows){
@@ -87,9 +96,9 @@ function crawl () {
         let menuId = 0;
         let uuid;
         // ADD CATEGORY
-        connection.query('SELECT * FROM restaurant_categories WHERE name = ?', [category]).then((rows) => {
+        connection.query('SELECT * FROM kinds WHERE name = ?', [category]).then((rows) => {
           if (rows.length === 0) {
-            connection.query('INSERT INTO restaurant_categories SET ?', {name: category}).then((rows) => {
+            connection.query('INSERT INTO kinds SET ?', {name: category}).then((rows) => {
               categoryId = rows.insertId;
             });
           } else categoryId = rows[0].id;
@@ -97,9 +106,9 @@ function crawl () {
           wait(500).then(() => {
             // CREATE USER
             bcrypt.hash('123456', 10).then(function(password) {
-                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password, address: address, created_at: Date.now(), updated_at: Date.now()}).then((rows) => {
+                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), address: address, created_at: Date.now(), updated_at: Date.now()}).then((rows) => {
                   uuid = hashIds.encode(rows.insertId);
-                  connection.query('INSERT INTO restaurants SET ?', { user_id: uuid, name: name, address: address, open_time: openTime, close_time: closeTime, category_id: categoryId}).then((inserted) => {
+                  connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, name: name, address: address, open_time: openTime, close_time: closeTime, category_id: categoryId}).then((inserted) => {
                     restaurantId = inserted.insertId;
                     connection.query('UPDATE users SET uuid = ?, username = ? WHERE id = ?', [uuid, 'restaurant'+restaurantId, rows.insertId]);
                     console.log('restaurant id: '+inserted.insertId);
@@ -125,7 +134,7 @@ function crawl () {
 
         wait(5000).then(() => {
           _.each(menus, menu => {
-            connection.query('INSERT INTO restaurant_menus SET ?', {name: menu.listName, restaurant_id: restaurantId}).then((rows) => {
+            connection.query('INSERT INTO menus SET ?', {name: menu.listName, restaurant_id: restaurantId}).then((rows) => {
               menuId = rows.insertId;
               _.each(menu.listFood, food => {
                 connection.query('INSERT INTO foods SET ?', {name: food.name, image: food.image, price: food.price, menu_id: menuId});
@@ -145,5 +154,6 @@ function crawl () {
 }
 
 module.exports = {
-  crawl: crawl
+  crawl: crawl,
+  getLinks: getLinks
 }

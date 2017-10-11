@@ -19,7 +19,11 @@ app.use(require('request-param')());
 app.use(compress());
 app.use(cors());
 app.use(helmet());
-exports.foody = foody.crawl();
+
+foody.getLinks();
+setTimeout(function(){
+	foody.crawl();
+}, 5000);
 
 app.listen(PORT, function() {
 	console.log('Port ' +  PORT);
