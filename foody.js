@@ -102,8 +102,8 @@ function crawl () {
           closeTime2 = time2[1];
         } else {
           time = _.split(time, '-', 2);
-          let openTime1 = time[0].trim();
-          let closeTime1 = time[1].trim();
+          openTime1 = time[0].trim();
+          closeTime1 = time[1].trim();
         }
         let categoryId = 0;
         let restaurantId = 0;
@@ -120,7 +120,7 @@ function crawl () {
           wait(500).then(() => {
             // CREATE USER
             bcrypt.hash('123456', 10).then(function(password) {
-                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), address: address, created_at: Date.now(), updated_at: Date.now()}).then((rows) => {
+                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), address: address, created_at: (new Date()).toISOString(), updated_at: (new Date()).toISOString()}).then((rows) => {
                   uuid = hashIds.encode(rows.insertId);
                   connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId}).then((inserted) => {
                     restaurantId = inserted.insertId;
