@@ -88,9 +88,23 @@ function crawl () {
         let name = $('.name-hot-restaurant').first().text();
         let address = $('.info-basic-hot-restaurant').children('p').first().text();
         let time = $('.info-basic-hot-restaurant').children('p').eq(1).children('span').eq(1).text();
-        time = _.split(time, '-', 2);
-        let openTime = time[0].trim();
-        let closeTime = time[1].trim();
+        let openTime1 = '';
+        let closeTime1 = '';
+        let openTime2 = '';
+        let closeTime2 = '';
+        if (time.includes('|')) {
+          time = _.split(time, ' | ', 2);
+          let time1 = _.split(time[0], ' - ', 2);
+          let time2 = _.split(time[1], ' - ', 2);
+          openTime1 = time1[0];
+          closeTime1 = time1[1];
+          openTime2 = time2[0];
+          closeTime2 = time2[1];
+        } else {
+          time = _.split(time, '-', 2);
+          let openTime1 = time[0].trim();
+          let closeTime1 = time[1].trim();
+        }
         let categoryId = 0;
         let restaurantId = 0;
         let menuId = 0;
@@ -108,7 +122,7 @@ function crawl () {
             bcrypt.hash('123456', 10).then(function(password) {
                 connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), address: address, created_at: Date.now(), updated_at: Date.now()}).then((rows) => {
                   uuid = hashIds.encode(rows.insertId);
-                  connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, name: name, address: address, open_time: openTime, close_time: closeTime, category_id: categoryId}).then((inserted) => {
+                  connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId}).then((inserted) => {
                     restaurantId = inserted.insertId;
                     connection.query('UPDATE users SET uuid = ?, username = ? WHERE id = ?', [uuid, 'restaurant'+restaurantId, rows.insertId]);
                     console.log('restaurant id: '+inserted.insertId);
