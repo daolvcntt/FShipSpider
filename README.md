@@ -1,1 +1,2 @@
 # FShipSpider
+Run npm start
