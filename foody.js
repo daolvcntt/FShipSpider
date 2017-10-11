@@ -65,6 +65,16 @@ function get(url, qs) {
   return request(op).then(function(res) {return res;});
 }
 
+function getNow () {
+  let today = new Date();
+  return today.getFullYear() +
+    '-' + (today.getMonth()+1) +
+    '-' + today.getDate() +
+    ' ' + today.getHours() +
+    ':' + today.getMinutes() +
+    ':' + today.getSeconds();
+}
+
 function getLinks () {
   console.log('Begin get links...');
   let links = fs.readFileSync('links.html').toString();
@@ -120,7 +130,7 @@ function crawl () {
           wait(500).then(() => {
             // CREATE USER
             bcrypt.hash('123456', 10).then(function(password) {
-                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), address: address, created_at: (new Date()).toISOString(), updated_at: (new Date()).toISOString()}).then((rows) => {
+                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), address: address, created_at: getNow(), updated_at: getNow()}).then((rows) => {
                   uuid = hashIds.encode(rows.insertId);
                   connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId}).then((inserted) => {
                     restaurantId = inserted.insertId;
