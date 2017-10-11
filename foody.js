@@ -1,18 +1,20 @@
 "use strict";
 
 require('dotenv').config()
-const async = require('async');
-const _ = require('lodash');
-const fs = require('fs');
+const async  = require('async');
+const _      = require('lodash');
+const fs     = require('fs');
 
 var bluebird = require("bluebird");
-var request = bluebird.promisify(require('request-promise').defaults({jar: true}));
-var stream = require('stream');
-var log = require('npmlog');
-var cheerio = require('cheerio');
-var mysql = require('promise-mysql');
-var hashids = require('hashids');
-var bcrypt = require('bcrypt');
+var request  = bluebird.promisify(require('request-promise').defaults({jar: true}));
+var stream   = require('stream');
+var log      = require('npmlog');
+var cheerio  = require('cheerio');
+var mysql    = require('promise-mysql');
+var hashids  = require('hashids');
+var bcrypt   = require('bcrypt');
+var moment   = require('moment');
+
 
 var hashIds = new hashids(process.env.HASHID_SALT, process.env.HASHID_LENGTH, process.env.HASHID_ALPHABET);
 var connection = mysql.createPool({
@@ -67,10 +69,11 @@ function get(url, qs) {
 
 function getLinks () {
   console.log('Begin get links...');
-  let links = fs.readFileSync('links.html').toString();
+  let timenow  =  moment().format("YYYY-MM-DD HH:mm:ss");
+  let links    = fs.readFileSync('links.html').toString();
   let arrLinks = _.split(links, '\n', 2000);
   async.each(arrLinks, link => {
-    connection.query('INSERT INTO links SET ?', {link: link});
+    connection.query('INSERT INTO links SET ?', {link: link, created_at: timenow, updated_at: timenow});
   })
 }
 
@@ -83,36 +86,37 @@ function crawl () {
         if (res.error) {
           throw res;
         }
-        let $ = cheerio.load(res.body);
-        let category = $('.kind-restaurant').first().text().trim();
-        let name = $('.name-hot-restaurant').first().text();
-        let address = $('.info-basic-hot-restaurant').children('p').first().text();
-        let time = $('.info-basic-hot-restaurant').children('p').eq(1).children('span').eq(1).text();
-        let openTime1 = '';
+        let timenow    =  moment().format("YYYY-MM-DD HH:mm:ss");
+        let $          = cheerio.load(res.body);
+        let category   = $('.kind-restaurant').first().text().trim();
+        let name       = $('.name-hot-restaurant').first().text();
+        let address    = $('.info-basic-hot-restaurant').children('p').first().text();
+        let time       = $('.info-basic-hot-restaurant').children('p').eq(1).children('span').eq(1).text();
+        let openTime1  = '';
         let closeTime1 = '';
-        let openTime2 = '';
+        let openTime2  = '';
         let closeTime2 = '';
         if (time.includes('|')) {
-          time = _.split(time, ' | ', 2);
-          let time1 = _.split(time[0], ' - ', 2);
-          let time2 = _.split(time[1], ' - ', 2);
-          openTime1 = time1[0];
+          time       = _.split(time, ' | ', 2);
+          let time1  = _.split(time[0], ' - ', 2);
+          let time2  = _.split(time[1], ' - ', 2);
+          openTime1  = time1[0];
           closeTime1 = time1[1];
-          openTime2 = time2[0];
+          openTime2  = time2[0];
           closeTime2 = time2[1];
         } else {
-          time = _.split(time, '-', 2);
-          openTime1 = time[0].trim();
+          time       = _.split(time, '-', 2);
+          openTime1  = time[0].trim();
           closeTime1 = time[1].trim();
         }
-        let categoryId = 0;
+        let categoryId   = 0;
         let restaurantId = 0;
-        let menuId = 0;
+        let menuId       = 0;
         let uuid;
         // ADD CATEGORY
         connection.query('SELECT * FROM kinds WHERE name = ?', [category]).then((rows) => {
           if (rows.length === 0) {
-            connection.query('INSERT INTO kinds SET ?', {name: category}).then((rows) => {
+            connection.query('INSERT INTO kinds SET ?', {name: category, created_at: timenow, updated_at: timenow}).then((rows) => {
               categoryId = rows.insertId;
             });
           } else categoryId = rows[0].id;
@@ -120,9 +124,9 @@ function crawl () {
           wait(500).then(() => {
             // CREATE USER
             bcrypt.hash('123456', 10).then(function(password) {
-                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), address: address, created_at: (new Date()).toISOString(), updated_at: (new Date()).toISOString()}).then((rows) => {
+                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), balance_confirm: 0, address: address, created_at: timenow, updated_at: timenow }).then((rows) => {
                   uuid = hashIds.encode(rows.insertId);
-                  connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId}).then((inserted) => {
+                  connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId, created_at: timenow, updated_at: timenow}).then((inserted) => {
                     restaurantId = inserted.insertId;
                     connection.query('UPDATE users SET uuid = ?, username = ? WHERE id = ?', [uuid, 'restaurant'+restaurantId, rows.insertId]);
                     console.log('restaurant id: '+inserted.insertId);
@@ -148,10 +152,10 @@ function crawl () {
 
         wait(5000).then(() => {
           _.each(menus, menu => {
-            connection.query('INSERT INTO menus SET ?', {name: menu.listName, restaurant_id: restaurantId}).then((rows) => {
+            connection.query('INSERT INTO menus SET ?', {name: menu.listName, restaurant_id: restaurantId, created_at: timenow, updated_at: timenow}).then((rows) => {
               menuId = rows.insertId;
               _.each(menu.listFood, food => {
-                connection.query('INSERT INTO foods SET ?', {name: food.name, image: food.image, price: food.price, menu_id: menuId});
+                connection.query('INSERT INTO foods SET ?', {name: food.name, image: food.image, price: food.price, menu_id: menuId, created_at: timenow, updated_at: timenow});
               });
             });
           });
