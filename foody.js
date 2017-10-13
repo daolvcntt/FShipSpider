@@ -71,9 +71,13 @@ function getLinks () {
   console.log('Begin get links...');
   let timenow  =  moment().format("YYYY-MM-DD HH:mm:ss");
   let links    = fs.readFileSync('links.html').toString();
-  let arrLinks = _.split(links, '\n', 2000);
+  let arrLinks = _.split(links, '\n', 3000);
   async.each(arrLinks, link => {
-    connection.query('INSERT INTO links SET ?', {link: link, created_at: timenow, updated_at: timenow});
+    connection.query('SELECT * FROM links WHERE link = ?', [link]).then(rows => {
+      if (rows.length === 0) {
+        connection.query('INSERT INTO links SET ?', {link: link, created_at: timenow, updated_at: timenow});
+      }
+    })
   })
 }
 
@@ -88,6 +92,7 @@ function crawl () {
         }
         let timenow    =  moment().format("YYYY-MM-DD HH:mm:ss");
         let $          = cheerio.load(res.body);
+        let restaurantImage = $('.img-hot-restaurant').first().children('img').first().attr('src');
         let category   = $('.kind-restaurant').first().text().trim();
         let name       = $('.name-hot-restaurant').first().text();
         let address    = $('.info-basic-hot-restaurant').children('p').first().text();
@@ -126,10 +131,10 @@ function crawl () {
             bcrypt.hash('123456', 10).then(function(password) {
                 connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), balance_confirm: 0, address: address, created_at: timenow, updated_at: timenow }).then((rows) => {
                   uuid = hashIds.encode(rows.insertId);
-                  connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId, created_at: timenow, updated_at: timenow}).then((inserted) => {
+                  connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, image: restaurantImage, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId, created_at: timenow, updated_at: timenow}).then((inserted) => {
                     restaurantId = inserted.insertId;
                     connection.query('UPDATE users SET uuid = ?, username = ? WHERE id = ?', [uuid, 'restaurant'+restaurantId, rows.insertId]);
-                    console.log('restaurant id: '+inserted.insertId);
+                    console.log('restaurant id: '+restaurantId);
                   });
                 });
             });
@@ -155,7 +160,7 @@ function crawl () {
             connection.query('INSERT INTO menus SET ?', {name: menu.listName, restaurant_id: restaurantId, created_at: timenow, updated_at: timenow}).then((rows) => {
               menuId = rows.insertId;
               _.each(menu.listFood, food => {
-                connection.query('INSERT INTO foods SET ?', {name: food.name, image: food.image, price: food.price, menu_id: menuId, created_at: timenow, updated_at: timenow});
+                connection.query('INSERT INTO foods SET ?', {name: food.name, image: food.image, price: food.price, menu_id: menuId, restaurant_id: restaurantId, created_at: timenow, updated_at: timenow});
               });
             });
           });
