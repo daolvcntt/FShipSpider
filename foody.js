@@ -119,9 +119,9 @@ function crawl () {
         let menuId       = 0;
         let uuid;
         // ADD CATEGORY
-        connection.query('SELECT * FROM kinds WHERE name = ?', [category]).then((rows) => {
+        connection.query('SELECT * FROM restaurant_kinds WHERE name = ?', [category]).then((rows) => {
           if (rows.length === 0) {
-            connection.query('INSERT INTO kinds SET ?', {name: category, created_at: timenow, updated_at: timenow}).then((rows) => {
+            connection.query('INSERT INTO restaurant_kinds SET ?', {name: category, created_at: timenow, updated_at: timenow}).then((rows) => {
               categoryId = rows.insertId;
             });
           } else categoryId = rows[0].id;
@@ -129,7 +129,7 @@ function crawl () {
           wait(500).then(() => {
             // CREATE USER
             bcrypt.hash('123456', 10).then(function(password) {
-                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), balance_confirm: 0, address: address, created_at: timenow, updated_at: timenow }).then((rows) => {
+                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), balance_confirm: 0, address: address, is_restaurant: 1, created_at: timenow, updated_at: timenow }).then((rows) => {
                   uuid = hashIds.encode(rows.insertId);
                   connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, image: restaurantImage, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId, created_at: timenow, updated_at: timenow}).then((inserted) => {
                     restaurantId = inserted.insertId;
