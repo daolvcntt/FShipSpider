@@ -131,7 +131,10 @@ function crawl () {
             bcrypt.hash('123456', 10).then(function(password) {
                 connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), balance_confirm: 0, address: address, is_restaurant: 1, created_at: timenow, updated_at: timenow }).then((rows) => {
                   uuid = hashIds.encode(rows.insertId);
-                  connection.query('INSERT INTO restaurants SET ?', { user_id: rows.insertId, image: restaurantImage, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, open_time2: openTime2, close_time2: closeTime2, category_id: categoryId, created_at: timenow, updated_at: timenow}).then((inserted) => {
+                  let userData = { user_id: rows.insertId, image: restaurantImage, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, category_id: categoryId, created_at: timenow, updated_at: timenow};
+                  if(openTime2) userData.open_time2 = openTime2;
+                  if(closeTime2) userData.close_time2 = closeTime2;
+                  connection.query('INSERT INTO restaurants SET ?', userData).then((inserted) => {
                     restaurantId = inserted.insertId;
                     connection.query('UPDATE users SET uuid = ?, username = ? WHERE id = ?', [uuid, 'restaurant'+restaurantId, rows.insertId]);
                     console.log('restaurant id: '+restaurantId);
