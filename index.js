@@ -20,6 +20,16 @@ app.use(compress());
 app.use(cors());
 app.use(helmet());
 
+// var googleMapsClient = require('@google/maps').createClient({
+//   key: 'AIzaSyB6ejQLRgg7pBH1a0eIx3s2OeEmpNfPpPk'
+// });
+// googleMapsClient.geocode({
+//   address: '26B Thọ Xương, Phủ Doãn, Quận Hoàn Kiếm, Hà Nội'
+// }, function(err, response){
+// 	if (!err) {
+// 	  console.log(response.json.results[0].geometry);
+// 	}
+// });
 foody.getLinks();
 setTimeout(function(){
 	foody.crawl();

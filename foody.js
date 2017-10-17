@@ -14,6 +14,9 @@ var mysql    = require('promise-mysql');
 var hashids  = require('hashids');
 var bcrypt   = require('bcrypt');
 var moment   = require('moment');
+var googleMapsClient = require('@google/maps').createClient({
+  key: process.env.GOOGLE_MAP_KEY
+});
 
 
 var hashIds = new hashids(process.env.HASHID_SALT, process.env.HASHID_LENGTH, process.env.HASHID_ALPHABET);
@@ -101,6 +104,8 @@ function crawl () {
         let closeTime1 = '';
         let openTime2  = '';
         let closeTime2 = '';
+        let lat        = 0;
+        let lng        = 0;
         if (time.includes('|')) {
           time       = _.split(time, ' | ', 2);
           let time1  = _.split(time[0], ' - ', 2);
@@ -114,9 +119,9 @@ function crawl () {
           openTime1  = time[0].trim();
           closeTime1 = time[1].trim();
         }
-        let categoryId   = 0;
-        let restaurantId = 0;
-        let menuId       = 0;
+        let categoryId     = 0;
+        let restaurantId   = 0;
+        let menuId         = 0;
         let uuid;
         // ADD CATEGORY
         connection.query('SELECT * FROM restaurant_kinds WHERE name = ?', [category]).then((rows) => {
@@ -127,19 +132,27 @@ function crawl () {
           } else categoryId = rows[0].id;
           // ADD RESTAURANT
           wait(500).then(() => {
+            // Phân loại đồ ăn, đồ uống
+            let restaurantType = category.includes('CAFÉ/DESSERT') ? 2 : 1;
             // CREATE USER
-            bcrypt.hash('123456', 10).then(function(password) {
-                connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), balance_confirm: 0, address: address, is_restaurant: 1, created_at: timenow, updated_at: timenow }).then((rows) => {
-                  uuid = hashIds.encode(rows.insertId);
-                  let userData = { user_id: rows.insertId, image: restaurantImage, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, category_id: categoryId, created_at: timenow, updated_at: timenow};
-                  if(openTime2) userData.open_time2 = openTime2;
-                  if(closeTime2) userData.close_time2 = closeTime2;
-                  connection.query('INSERT INTO restaurants SET ?', userData).then((inserted) => {
-                    restaurantId = inserted.insertId;
-                    connection.query('UPDATE users SET uuid = ?, username = ? WHERE id = ?', [uuid, 'restaurant'+restaurantId, rows.insertId]);
-                    console.log('restaurant id: '+restaurantId);
+            googleMapsClient.geocode({ address: address }, function(err, response) {
+              if (!err) {
+                lat = response.json.results[0].geometry.location.lat;
+                lng = response.json.results[0].geometry.location.lng;
+              }
+              bcrypt.hash('123456', 10).then(function(password) {
+                  connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), balance_confirm: 0, address: address, is_restaurant: 1, created_at: timenow, updated_at: timenow }).then((rows) => {
+                    uuid = hashIds.encode(rows.insertId);
+                    let userData = { user_id: rows.insertId, image: restaurantImage, name: name, address: address, open_time1: openTime1, close_time1: closeTime1, category_id: categoryId, created_at: timenow, updated_at: timenow, lat: lat, lng: lng, type: restaurantType};
+                    if(openTime2) userData.open_time2 = openTime2;
+                    if(closeTime2) userData.close_time2 = closeTime2;
+                    connection.query('INSERT INTO restaurants SET ?', userData).then((inserted) => {
+                      restaurantId = inserted.insertId;
+                      connection.query('UPDATE users SET uuid = ?, username = ? WHERE id = ?', [uuid, 'restaurant'+restaurantId, rows.insertId]);
+                      console.log('restaurant id: '+restaurantId);
+                    });
                   });
-                });
+              });
             });
           });
         });
@@ -152,8 +165,9 @@ function crawl () {
             // console.log($(this).html());
             let foodImage = $(this).children('.img-food-detail').children('a').first().children('img').first().attr('src');
             let foodName = $(this).children('.name-food-detail').children('a').children('h3').first().text().trim();
+            let foodDescription = $(this).children('.name-food-detail').children('.desc').first().text().trim();
             let foodPrice = $(this).children('.more-info').first().children('.product-price').first().children('a').first().children('.current-price').first().children('span').first().text();
-            listFood.push({image: foodImage, name: _.split(foodName, ' -', 1)[0], price: foodPrice.replace(',', '')});
+            listFood.push({image: foodImage, name: _.split(foodName, ' -', 1)[0], price: foodPrice.replace(',', ''), description: foodDescription});
           });
           menus.push({listName: listName.trim(), listFood: listFood});
         });
@@ -163,7 +177,7 @@ function crawl () {
             connection.query('INSERT INTO menus SET ?', {name: menu.listName, restaurant_id: restaurantId, created_at: timenow, updated_at: timenow}).then((rows) => {
               menuId = rows.insertId;
               _.each(menu.listFood, food => {
-                connection.query('INSERT INTO foods SET ?', {name: food.name, image: food.image, price: food.price, menu_id: menuId, restaurant_id: restaurantId, created_at: timenow, updated_at: timenow});
+                connection.query('INSERT INTO foods SET ?', {name: food.name, image: food.image, price: food.price, description: food.description, menu_id: menuId, restaurant_id: restaurantId, created_at: timenow, updated_at: timenow});
               });
             });
           });
