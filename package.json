@@ -30,6 +30,7 @@
   "dependencies": {
     "@google/maps": "^0.4.5",
     "async": "^2.5.0",
+    "aws-sdk": "^2.135.0",
     "axios": "^0.16.2",
     "bcrypt": "^1.0.3",
     "bluebird": "^3.5.1",
