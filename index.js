@@ -23,4 +23,4 @@ app.use(helmet());
 foody.getLinks();
 setTimeout(function(){
 	foody.crawl();
-}, 10000);
+}, 180000);

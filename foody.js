@@ -74,7 +74,7 @@ function get(url, qs) {
 
 function getLinks () {
   console.log('Begin get links...');
-  console.log('Mat khoang 10s. Va that dang de cho doi...');
+  console.log('Mat khoang 2 phut. Va that dang de cho doi...');
   let timenow  =  moment().format("YYYY-MM-DD HH:mm:ss");
   let links    = fs.readFileSync('links.html').toString();
   let arrLinks = _.split(links, '\n', 3000);
