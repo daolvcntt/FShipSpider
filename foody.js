@@ -155,7 +155,8 @@ function crawl () {
             // ADD RESTAURANT
             wait(700).then(() => {
               // Phân loại đồ ăn, đồ uống
-              let restaurantType = category.includes('CAFÉ/DESSERT') ? 2 : 1;
+              let nameLower = _.toLower(name);
+              let restaurantType = (nameLower.includes('cơm') || nameLower.includes('cháo') || nameLower.includes('tào phớ') || nameLower.includes('bánh') || nameLower.includes('phở') || nameLower.includes('nem') || nameLower.includes('gà') || nameLower.includes('bún') || nameLower.includes('món')) ? 1 : 2;
               // CREATE USER
               googleMapsClient.geocode({ address: address }, function(err, response) {
                 if (!err) {
