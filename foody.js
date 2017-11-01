@@ -138,14 +138,14 @@ function crawl () {
             time       = _.split(time, ' | ', 2);
             let time1  = _.split(time[0], ' - ', 2);
             let time2  = _.split(time[1], ' - ', 2);
-            openTime1  = time1[0] ? time[0].trim() : '';
-            closeTime1 = time1[1] ? time[1].trim() : '';
-            openTime2  = time2[0] ? time[0].trim() : '';
-            closeTime2 = time2[1] ? time[1].trim() : '';
+            openTime1  = time1[0].trim();
+            closeTime1 = time1[1].trim();
+            openTime2  = time2[0].trim();
+            closeTime2 = time2[1].trim();
           } else {
             time       = _.split(time, '-', 2);
-            openTime1  = time[0] ? time[0].trim() : '';
-            closeTime1 = time[1] ? time[1].trim() : '';
+            openTime1  = time[0].trim();
+            closeTime1 = time[1].trim();
           }
           let categoryId     = 0;
           let restaurantId   = 0;
