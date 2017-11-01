@@ -92,7 +92,7 @@ function getLinks () {
 }
 
 function uploadRemoteImage (url) {
-  return url;
+  // return url;
   if ((url === undefined) || url.includes('no-image')) {
     return '';
   }
@@ -164,11 +164,11 @@ function crawl () {
               let nameLower = _.toLower(name);
               let restaurantType = (nameLower.includes('cơm') || nameLower.includes('cháo') || nameLower.includes('tào phớ') || nameLower.includes('bánh') || nameLower.includes('phở') || nameLower.includes('nem') || nameLower.includes('gà') || nameLower.includes('bún') || nameLower.includes('món')) ? 1 : 2;
               // CREATE USER
-              // googleMapsClient.geocode({ address: address }, function(err, response) {
-              //   if (!err) {
-              //     lat = response.json.results[0].geometry.location.lat;
-              //     lng = response.json.results[0].geometry.location.lng;
-              //   }
+              googleMapsClient.geocode({ address: address }, function(err, response) {
+                if (!err) {
+                  lat = response.json.results[0].geometry.location.lat;
+                  lng = response.json.results[0].geometry.location.lng;
+                }
                 bcrypt.hash('123456', 10).then(function(password) {
                     connection.query('INSERT INTO users SET ?', {name: name, username: 'user', password: password.replace('$2a$', '$2y$'), balance_confirm: 0, address: address, is_restaurant: 1, created_at: timenow, updated_at: timenow }).then((rows) => {
                       uuid = hashIds.encode(rows.insertId);
@@ -182,7 +182,7 @@ function crawl () {
                       });
                     });
                 });
-              // });
+              });
             });
           });
 
